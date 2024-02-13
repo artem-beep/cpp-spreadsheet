@@ -5,13 +5,25 @@
 
 #include <functional>
 #include <unordered_set>
-
+#include <optional>
+#include <set>
 class Sheet;
 
-class Cell : public CellInterface {
+enum CONTENT
+{
+    EMPTY,
+    TEXT,
+    FORMULA,
+};
+
+class Cell : public CellInterface
+{
 public:
-    Cell(Sheet& sheet);
-    ~Cell();
+    ~Cell() = default;
+    Cell(SheetInterface &sheet)
+        : sheet_(sheet)
+    {
+    }
 
     void Set(std::string text);
     void Clear();
@@ -19,18 +31,16 @@ public:
     Value GetValue() const override;
     std::string GetText() const override;
     std::vector<Position> GetReferencedCells() const override;
-
-    bool IsReferenced() const;
+    void ClearCache();
+    bool HasCellCircularReferences(std::set<Cell *> &visited, std::set<Cell *> &to_visit, Cell *cell);
+    void ClearChildrenCash(std::set<Cell *> &visited, Cell *child);
+    void AddChildToParents();
 
 private:
-    class Impl;
-    class EmptyImpl;
-    class TextImpl;
-    class FormulaImpl;
-
-    std::unique_ptr<Impl> impl_;
-
-    // Добавьте поля и методы для связи с таблицей, проверки циклических 
-    // зависимостей, графа зависимостей и т. д.
-
+    CONTENT type_of_content_;
+    std::string raw_content_;
+    std::unique_ptr<FormulaInterface> formula_;
+    mutable std::optional<double> cache_;
+    SheetInterface &sheet_;
+    std::vector<Cell *> children_;
 };
